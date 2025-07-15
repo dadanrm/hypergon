@@ -10,6 +10,7 @@ import (
 	"github.com/dadanrm/hypergon/logging"
 )
 
+// Custom http error type
 type HypergonError interface {
 	Error() string
 	StatusCode() int
