@@ -10,25 +10,34 @@ import (
 	"github.com/dadanrm/hypergon/logging"
 )
 
+type HypergonError interface {
+	Error() string
+	StatusCode() int
+}
+
 type httperror struct {
 	status  int
 	message string
+}
+
+func (he httperror) StatusCode() int {
+	return he.status
 }
 
 func (he httperror) Error() string {
 	return fmt.Sprintf("Status: %d, Message: %s", he.status, he.message)
 }
 
-func HttpError(status int, message string) *httperror {
+func HttpError(status int, message string) HypergonError {
 	return &httperror{status: status, message: message}
 }
 
 // HandlerFunc is a custom http handler that can return an error
-type HandlerFunc func(http.ResponseWriter, *http.Request) error
+type HandlerFunc func(http.ResponseWriter, *http.Request) HypergonError
 
 func (h HandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := h(w, r); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), err.StatusCode())
 	}
 }
 
@@ -115,7 +124,11 @@ func (hy *Hyper) Shutdown(ctx context.Context) error {
 
 // Adapter for handling native implementation of standard handlers for Hyper.
 func AdapterHandler(h http.Handler) HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
+	// return func(w http.ResponseWriter, r *http.Request) error {
+	// 	h.ServeHTTP(w, r)
+	// 	return nil
+	// }
+	return func(w http.ResponseWriter, r *http.Request) HypergonError {
 		h.ServeHTTP(w, r)
 		return nil
 	}

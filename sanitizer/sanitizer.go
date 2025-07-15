@@ -12,7 +12,7 @@ import (
 // SanitizeMiddleware sanitizes all form inputs in the request.
 func SanitizeMiddleware() hypergon.Middleware {
 	return func(hf hypergon.HandlerFunc) hypergon.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) error {
+		return func(w http.ResponseWriter, r *http.Request) hypergon.HypergonError {
 			// Sanitize query parameters
 			sanitizedQuery := sanitizeValues(r.URL.Query())
 			r.URL.RawQuery = sanitizedQuery.Encode()

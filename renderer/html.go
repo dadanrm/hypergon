@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/dadanrm/hypergon"
 )
 
 type RendererHook func(http.ResponseWriter, *http.Request, map[string]any)
@@ -113,7 +115,7 @@ func (r *HTMLRender) AddHook(hook RendererHook) {
 
 // Render renders a html page with layout.
 // The name must unique so it wont be a conflict to other html pages.
-func (r *HTMLRender) Render(w http.ResponseWriter, req *http.Request, name string, data map[string]any) error {
+func (r *HTMLRender) Render(w http.ResponseWriter, req *http.Request, name string, data map[string]any) hypergon.HypergonError {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	if data == nil {
@@ -128,15 +130,20 @@ func (r *HTMLRender) Render(w http.ResponseWriter, req *http.Request, name strin
 	var contentBuffer bytes.Buffer
 	err := r.templates.ExecuteTemplate(&contentBuffer, name, data)
 	if err != nil {
-		return err
+		return hypergon.HttpError(http.StatusInternalServerError, "Content render error: "+err.Error())
 	}
 
 	safeContent := sanitizeHTML(contentBuffer.String())
 
-	return r.templates.ExecuteTemplate(w, r.layout, map[string]any{
+	err = r.templates.ExecuteTemplate(w, r.layout, map[string]any{
 		"Content": template.HTML(safeContent),
 		"Data":    data,
 	})
+	if err != nil {
+		return hypergon.HttpError(http.StatusInternalServerError, "Content render error: "+err.Error())
+	}
+
+	return nil
 }
 
 // RenderPartial renders a partial template without the layout

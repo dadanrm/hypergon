@@ -26,7 +26,7 @@ func New(key ...string) *CSRF {
 
 func (cs *CSRF) Middleware() hypergon.Middleware {
 	return func(hf hypergon.HandlerFunc) hypergon.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) error {
+		return func(w http.ResponseWriter, r *http.Request) hypergon.HypergonError {
 			var csrfToken string
 
 			cookie, err := r.Cookie("csrf_token")
