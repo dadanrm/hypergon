@@ -148,11 +148,14 @@ func (r *HTMLRender) Render(w http.ResponseWriter, req *http.Request, name strin
 
 // RenderPartial renders a partial template without the layout
 // The name must unique so it wont be a conflict to other partial htmls.
-func (r *HTMLRender) RenderPartial(w http.ResponseWriter, name string, data any) error {
+func (r *HTMLRender) RenderPartial(w http.ResponseWriter, name string, data any) hypergon.HypergonError {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	// Render just the partial template directly to the response
-	return r.templates.ExecuteTemplate(w, name, data)
+	if err := r.templates.ExecuteTemplate(w, name, data); err != nil {
+		return hypergon.HttpError(http.StatusInternalServerError, "Content render error:"+err.Error())
+	}
+	return nil
 }
 
 func sanitizeHTML(input string) string {
