@@ -5,6 +5,7 @@ import (
 	"html"
 	"html/template"
 	"log"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,6 +26,9 @@ type HTMLRenderConfig struct {
 	//
 	// Default:  []string{"templates", "templates/partials"}
 	TemplateDirs []string
+
+	// Add custom functionality within your html template
+	CustomFuncs map[string]any
 }
 
 // HTMLRender accepts templates and a layout that will parse all necessary html files.
@@ -75,6 +79,8 @@ func NewHTMLRenderer(cfg ...HTMLRenderConfig) *HTMLRender {
 		},
 		"unescape": html.UnescapeString, // WARN: use this with caution
 	}
+
+	maps.Copy(funcs, config.CustomFuncs)
 
 	// Start with an empty template set
 	tmpls := template.New("").Funcs(funcs)
