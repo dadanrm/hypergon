@@ -23,11 +23,11 @@ type RouteGroup struct {
 
 // This manager handles the handlers and its endpoint by grouping and
 // emitting the grouped handlers into a more compact approach.
-type RoutingManager interface {
+type Manager interface {
 	Register(groups []*RouteGroup)
 }
 
-func NewRoutingManager(app *hypergon.Hyper) RoutingManager {
+func NewRoutingManager(app *hypergon.Hyper) Manager {
 	return &routingmanagerimpl{app}
 }
 
