@@ -47,16 +47,15 @@ func (m *routingmanagerimpl) Register(groups []*RouteGroup) {
 		}
 
 		for _, route := range group.Routes {
-			// COMBINE the group Prefix and the route's relative Path
-			fullPathForRoute := path.Join(group.Prefix, route.Path)
+			fullPathForLog := path.Join(group.Prefix, route.Path)
+			logString := fmt.Sprintf("%s %s", route.Method, fullPathForLog)
 
-			// Re-assemble the method and full path for the Handle function
-			handleString := fmt.Sprintf("%s %s", route.Method, fullPathForRoute)
-
+			handleString := fmt.Sprintf("%s %s", route.Method, route.Path)
 			// --- ADD THIS LOGGING LINE ---
 			if os.Getenv("APP_ENV") == "development" {
-				fmt.Printf("[RoutingManager] Registering route: %s\n", handleString)
+				fmt.Printf("[RoutingManager] Registering route: %s\n", logString)
 			}
+
 			routerGroup.Action(handleString, route.Handler)
 		}
 
@@ -80,15 +79,13 @@ func (m *routingmanagerimpl) registerSubGroups(parentPrefix string, parentMiddle
 		}
 
 		for _, route := range subGroup.Routes {
-			// COMBINE the full group Prefix and the route's relative Path
-			fullPathForRoute := path.Join(fullPrefix, route.Path)
+			fullPathForLog := path.Join(fullPrefix, route.Path)
+			logString := fmt.Sprintf("%s %s", route.Method, fullPathForLog)
 
-			// Re-assemble the method and full path for the Handle function
-			handleString := fmt.Sprintf("%s %s", route.Method, fullPathForRoute)
-
+			handleString := fmt.Sprintf("%s %s", route.Method, route.Path)
 			// --- ADD THIS LOGGING LINE ---
 			if os.Getenv("APP_ENV") == "development" {
-				fmt.Printf("[RoutingManager] Registering route: %s\n", handleString)
+				fmt.Printf("[RoutingManager] Registering route: %s\n", logString)
 			}
 			routerGroup.Action(handleString, route.Handler)
 		}
