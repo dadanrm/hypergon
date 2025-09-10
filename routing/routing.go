@@ -38,34 +38,10 @@ type routingmanagerimpl struct {
 
 // Build implements RoutingManager.
 func (m *routingmanagerimpl) Register(groups []*RouteGroup) {
-	m.registerSubGroups("", nil, groups)
-	// for _, group := range groups {
-	// 	routerGroup := m.app.Group(group.Prefix)
-	//
-	// 	if len(group.Middleware) > 0 {
-	// 		routerGroup.Chain(group.Middleware...)
-	// 	}
-	//
-	// 	for _, route := range group.Routes {
-	// 		fullPathForLog := path.Join(group.Prefix, route.Path)
-	// 		logString := fmt.Sprintf("%s %s", route.Method, fullPathForLog)
-	//
-	// 		handleString := fmt.Sprintf("%s %s", route.Method, route.Path)
-	// 		// --- ADD THIS LOGGING LINE ---
-	// 		if os.Getenv("APP_ENV") == "development" {
-	// 			fmt.Printf("[RoutingManager] Registering route: %s\n", logString)
-	// 		}
-	//
-	// 		routerGroup.Action(handleString, route.Handler)
-	// 	}
-	//
-	// 	if len(group.SubGroups) > 0 {
-	// 		m.registerSubGroups(group.Prefix, group.Middleware, group.SubGroups)
-	// 	}
-	// }
+	m.registerGroups("", nil, groups)
 }
 
-func (m *routingmanagerimpl) registerSubGroups(parentPrefix string, parentMiddleware []hypergon.Middleware, groups []*RouteGroup) {
+func (m *routingmanagerimpl) registerGroups(parentPrefix string, parentMiddleware []hypergon.Middleware, groups []*RouteGroup) {
 	for _, group := range groups {
 		// 1. Calculate the full prefix for the current group.
 		fullPrefix := path.Join(parentPrefix, group.Prefix)
@@ -95,7 +71,7 @@ func (m *routingmanagerimpl) registerSubGroups(parentPrefix string, parentMiddle
 
 		// 4. Continue the recursion for any subgroups.
 		if len(group.SubGroups) > 0 {
-			m.registerSubGroups(fullPrefix, allMiddleware, group.SubGroups)
+			m.registerGroups(fullPrefix, allMiddleware, group.SubGroups)
 		}
 	}
 }
