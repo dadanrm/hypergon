@@ -8,43 +8,50 @@ import (
 	"strconv"
 
 	"github.com/dadanrm/hypergon"
+	"github.com/dadanrm/hypergon/reswriter"
 )
 
 func New() hypergon.Middleware {
-	return func(hf hypergon.HandlerFunc) hypergon.HandlerFunc {
+	return func(next hypergon.HandlerFunc) hypergon.HandlerFunc {
 		var (
 			headerEtag        = "Etag"
 			headerIfNoneMatch = "If-None-Match"
 			weakPrefix        = []byte("W/\"")
 			quoteSuffix       = []byte("\"")
 		)
-
-		const crcPol = 0x82F63B78
-		crc32q := crc32.MakeTable(crcPol)
+		crc32q := crc32.MakeTable(crc32.IEEE)
 
 		return func(w http.ResponseWriter, r *http.Request) hypergon.HypergonError {
-			ew := &etagwriter{
-				ResponseWriter: w,
-				body:           bytes.NewBuffer(nil),
-				headers:        make(http.Header),
-			}
+			// 1. Create the caching writer.
+			cw := reswriter.NewCachingWriter(w)
 
-			if err := hf(ew, r); err != nil {
+			// 2. Execute the next handler EXACTLY ONCE.
+			if err := next(cw, r); err != nil {
 				return err
 			}
 
-			body := ew.body.Bytes()
-
-			if ew.status != http.StatusOK || len(body) == 0 {
-
-				maps.Copy(w.Header(), ew.headers)
-
-				w.WriteHeader(ew.status)
-				w.Write(body)
-
+			// 3. Check if the handler switched to streaming mode.
+			if cw.IsStreaming {
+				// The response has already been sent. Do nothing.
 				return nil
 			}
 
+			// --- If we get here, we know the full response is buffered. ---
+
+			body := cw.Body.Bytes()
+			status := cw.Status
+			if status == 0 {
+				status = http.StatusOK
+			}
+
+			if status != http.StatusOK || len(body) == 0 {
+				maps.Copy(w.Header(), cw.Headers)
+				w.WriteHeader(status)
+				w.Write(body)
+				return nil
+			}
+
+			// Generate and check the ETag just like before.
 			checksum := crc32.Checksum(body, crc32q)
 			etag := bytes.NewBuffer(weakPrefix)
 			etag.WriteString(strconv.FormatUint(uint64(checksum), 16))
@@ -52,48 +59,16 @@ func New() hypergon.Middleware {
 			generatedEtag := etag.Bytes()
 
 			if match := r.Header.Get(headerIfNoneMatch); match != "" && bytes.Equal([]byte(match), generatedEtag) {
-
-				w.Header().Set(string(headerEtag), string(generatedEtag))
+				w.Header().Set(headerEtag, string(generatedEtag))
 				w.WriteHeader(http.StatusNotModified)
 				return nil
-			} else {
-				maps.Copy(w.Header(), ew.headers)
-
-				w.Header().Set(headerEtag, string(generatedEtag))
-				w.WriteHeader(ew.status)
-				w.Write(body)
-
 			}
 
+			maps.Copy(w.Header(), cw.Headers)
+			w.Header().Set(headerEtag, string(generatedEtag))
+			w.WriteHeader(status)
+			w.Write(body)
 			return nil
 		}
 	}
-}
-
-// etagWriter is a wrapper around http.ResponseWriter that captures the response body and status code.
-type etagwriter struct {
-	http.ResponseWriter
-	body    *bytes.Buffer
-	headers http.Header
-	status  int
-}
-
-func (w *etagwriter) Header() http.Header {
-	return w.headers
-}
-
-// WriteHeader captures the status code and calls the original WriteHeader.
-func (w *etagwriter) WriteHeader(statusCode int) {
-	if w.status == 0 {
-		w.status = statusCode
-	}
-}
-
-// Write captures the response body and writes it to both the internal buffer and the original ResponseWriter.
-func (w *etagwriter) Write(b []byte) (int, error) {
-	if w.status == 0 {
-		w.status = http.StatusOK
-	}
-
-	return w.body.Write(b)
 }
