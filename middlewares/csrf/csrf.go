@@ -43,6 +43,7 @@ func (cs *CSRF) Middleware() hypergon.Middleware {
 					Value:    csrfToken,
 					HttpOnly: true,
 					Secure:   true,
+					Path:     "/",
 					SameSite: http.SameSiteStrictMode,
 				})
 
@@ -52,6 +53,7 @@ func (cs *CSRF) Middleware() hypergon.Middleware {
 					Value:    csrfToken,
 					HttpOnly: false,
 					Secure:   true,
+					Path:     "/",
 					SameSite: http.SameSiteStrictMode,
 				})
 			} else {
