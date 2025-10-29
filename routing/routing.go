@@ -56,8 +56,6 @@ func (m *routingmanagerimpl) registerGroups(parentPrefix string, parentMiddlewar
 			absolutePath := path.Join(fullPrefix, route.Path)
 			handleString := fmt.Sprintf("%s %s", route.Method, absolutePath)
 
-			fmt.Printf("[Routing Manager] Registering route: %s\n", handleString)
-
 			// Wrap the route's handler with all collected middleware.
 			// We loop backwards to apply them in the correct order (like an onion).
 			finalHandler := route.Handler
