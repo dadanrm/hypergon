@@ -2,6 +2,7 @@ package hypergon
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,11 +15,16 @@ import (
 type HypergonError interface {
 	Error() string
 	StatusCode() int
+	ContentType() string
 }
 
 type httperror struct {
 	status  int
 	message string
+}
+
+func (he *httperror) ContentType() string {
+	return "text/plain; charset=utf-8"
 }
 
 func (he httperror) StatusCode() int {
@@ -33,12 +39,42 @@ func HttpError(status int, message string) HypergonError {
 	return &httperror{status: status, message: message}
 }
 
+type jsonerror struct {
+	Status int            `json:"status"`
+	Data   map[string]any `json:"data"`
+}
+
+func (he *jsonerror) ContentType() string {
+	return "application/json"
+}
+
+func (he *jsonerror) StatusCode() int {
+	return he.Status
+}
+
+func (he *jsonerror) Error() string {
+	jsonData, err := json.Marshal(he)
+	if err != nil {
+		return fmt.Sprintf(`{"code":500, "message":"failed to marshal error: %v"}`, err)
+	}
+
+	return string(jsonData)
+}
+
+func JSONError(status int, data map[string]any) HypergonError {
+	return &jsonerror{Status: status, Data: data}
+}
+
 // HandlerFunc is a custom http handler that can return an error
 type HandlerFunc func(http.ResponseWriter, *http.Request) HypergonError
 
 func (h HandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := h(w, r); err != nil {
-		http.Error(w, err.Error(), err.StatusCode())
+		w.Header().Set("Content-Type", err.ContentType())
+
+		w.WriteHeader(err.StatusCode())
+
+		w.Write([]byte(err.Error()))
 	}
 }
 
